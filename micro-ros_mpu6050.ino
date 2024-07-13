@@ -100,23 +100,12 @@ void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
       msg.orientation.x = q.x;
       msg.orientation.y = q.y;
       msg.orientation.z = q.z;
-      msg.angular_velocity.x = (float)gg.x;
-      msg.angular_velocity.y = (float)gg.y;
-      msg.angular_velocity.z = (float)gg.z;
-      msg.linear_acceleration.x = (float)aa.x;
-      msg.linear_acceleration.y = (float)aa.y;
-      msg.linear_acceleration.z = (float)aa.z;
-      msg.angular_velocity_covariance[0] = 0.01;
-      msg.angular_velocity_covariance[4] = 0.01;
-      msg.angular_velocity_covariance[8] = 0.01; 
-      msg.linear_acceleration_covariance[0] = 0.01;
-      msg.linear_acceleration_covariance[4] = 0.01;
-      msg.linear_acceleration_covariance[8] = 0.01;
-      msg.orientation_covariance[0] = 0.01;
-      msg.orientation_covariance[4] = 0.01;
-      msg.orientation_covariance[8] = 0.01;
-      msg.header.frame_id = "imu_link";
-      
+      msg.angular_velocity.x = (float)aa.x; // these might be gg not aa
+      msg.angular_velocity.y = (float)aa.y;
+      msg.angular_velocity.z = (float)aa.z;
+      msg.linear_acceleration.x = (float)gg.x; // these might be aa not gg
+      msg.linear_acceleration.y = (float)gg.y;
+      msg.linear_acceleration.z = (float)gg.z;
 
       RCSOFTCHECK(rcl_publish(&publisher, &msg, NULL));
 
@@ -126,7 +115,8 @@ void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
   }
 }
 
-bool create_entities() {
+bool create_entities()
+{
   // Code to initialize ROS entities
   allocator = rcl_get_default_allocator();
 
@@ -158,9 +148,10 @@ bool create_entities() {
   return true;
 }
 
-void destroy_entities() {
-    rmw_context_t * rmw_context = rcl_context_get_rmw_context(&support.context);
-  (void) rmw_uros_set_context_entity_destroy_session_timeout(rmw_context, 0);
+void destroy_entities()
+{
+  rmw_context_t *rmw_context = rcl_context_get_rmw_context(&support.context);
+  (void)rmw_uros_set_context_entity_destroy_session_timeout(rmw_context, 0);
 
   rcl_publisher_fini(&publisher, &node);
   rcl_publisher_fini(&publisher2, &node);
@@ -169,7 +160,6 @@ void destroy_entities() {
   rcl_node_fini(&node);
   rclc_support_fini(&support);
 }
-
 
 void setup()
 {
@@ -215,6 +205,8 @@ void setup()
   delay(2000);
 
   msg2.data = 0;
+
+  msg.header.frame_id.data = "imu_link";
 }
 
 void loop()
@@ -258,4 +250,3 @@ void loop()
     RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
   }
 }
-
