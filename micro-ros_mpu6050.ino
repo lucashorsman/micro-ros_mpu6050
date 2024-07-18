@@ -70,7 +70,7 @@ float ypr[3];        // [yaw, pitch, roll]   yaw/pitch/roll container and gravit
   }
 
 MPU6050 mpu;
-// MPU6050 imu2(0x69);
+ //MPU6050 imu2(0x69);
 // int16_t gx1, gy1, gz1;
 // int16_t gx, gy, gz;
 
@@ -95,6 +95,9 @@ void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
       mpu.dmpGetGravity(&gravity, &q);
       mpu.dmpGetAccel(&aa, fifoBuffer);
       mpu.dmpGetGyro(&gg, fifoBuffer);
+
+
+
 
       msg.orientation.w = q.w;
       msg.orientation.x = q.x;
