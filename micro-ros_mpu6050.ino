@@ -1,5 +1,5 @@
 // #include <MPU6050.h>
-#include "MPU6050_6Axis_MotionApps20.h"
+// #include "MPU6050_6Axis_MotionApps20.h"
 
 #include <micro_ros_arduino.h>
 
@@ -14,7 +14,7 @@
 rcl_publisher_t publisher;
 rcl_publisher_t publisher2;
 sensor_msgs__msg__Imu msg;
-std_msgs__msg__Float32 msg2;
+sensor_msgs__msg__Imu msg2;
 
 rclc_executor_t executor;
 rclc_support_t support;
@@ -32,24 +32,6 @@ enum states
   AGENT_CONNECTED,
   AGENT_DISCONNECTED
 } state;
-
-// MPU control/status vars
-bool dmpReady = false;  // set true if DMP init was successful
-uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
-uint8_t devStatus;      // return status after each device operation (0 = success, !0 = error)
-uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
-uint16_t fifoCount;     // count of all bytes currently in FIFO
-uint8_t fifoBuffer[64]; // FIFO storage buffer
-
-// orientation/motion vars
-Quaternion q;        // [w, x, y, z] //the ros2 quat message expects xyzw        quaternion container
-VectorInt16 aa;      // [x, y, z]            accel sensor measurements
-VectorInt16 gg;      // [x, y, z]            gyro sensor measurements
-VectorInt16 aaWorld; // [x, y, z]            world-frame accel sensor measurements
-VectorInt16 ggWorld; // [x, y, z]            world-frame accel sensor measurements
-VectorFloat gravity; // [x, y, z]            gravity vector
-float euler[3];      // [psi, theta, phi]    Euler angle container
-float ypr[3];        // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 
 #define LED_PIN 13
 
@@ -69,10 +51,27 @@ float ypr[3];        // [yaw, pitch, roll]   yaw/pitch/roll container and gravit
     }                            \
   }
 
-MPU6050 mpu;
- //MPU6050 imu2(0x69);
-// int16_t gx1, gy1, gz1;
-// int16_t gx, gy, gz;
+#include <Adafruit_MPU6050.h>
+
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+
+#define TCAADDR 0x70
+
+/* Assign a unique ID to this sensor at the same time */
+Adafruit_MPU6050 mpu;
+Adafruit_MPU6050 mpu2;
+sensors_event_t accel, gyro, temp; // Declares an object "event"
+
+void tcaselect(uint8_t i)
+{
+  if (i > 7)
+    return;
+
+  Wire.beginTransmission(TCAADDR);
+  Wire.write(1 << i);
+  Wire.endTransmission();
+}
 
 void error_loop()
 {
@@ -90,27 +89,28 @@ void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
     RCLC_UNUSED(last_call_time);
     if (timer != NULL)
     {
-      mpu.dmpGetCurrentFIFOPacket(fifoBuffer);
-      mpu.dmpGetQuaternion(&q, fifoBuffer);
-      mpu.dmpGetGravity(&gravity, &q);
-      mpu.dmpGetAccel(&aa, fifoBuffer);
-      mpu.dmpGetGyro(&gg, fifoBuffer);
+      sensors_event_t event;
 
-
-
-
-      msg.orientation.w = q.w;
-      msg.orientation.x = q.x;
-      msg.orientation.y = q.y;
-      msg.orientation.z = q.z;
-      msg.angular_velocity.x = (float)aa.x; // these might be gg not aa
-      msg.angular_velocity.y = (float)aa.y;
-      msg.angular_velocity.z = (float)aa.z;
-      msg.linear_acceleration.x = (float)gg.x; // these might be aa not gg
-      msg.linear_acceleration.y = (float)gg.y;
-      msg.linear_acceleration.z = (float)gg.z;
-
+      tcaselect(0);
+      mpu.getEvent(&accel, &gyro, &temp);
+      msg.angular_velocity.x = gyro.gyro.x; // these might be gg not aa
+      msg.angular_velocity.y = gyro.gyro.y;
+      msg.angular_velocity.z = gyro.gyro.z;
+      msg.linear_acceleration.x = accel.acceleration.x; // these might be aa not gg
+      msg.linear_acceleration.y = accel.acceleration.y;
+      msg.linear_acceleration.z = accel.acceleration.z;
       RCSOFTCHECK(rcl_publish(&publisher, &msg, NULL));
+      delay(1000);
+      tcaselect(1);
+      mpu2.getEvent(&accel, &gyro, &temp);
+      msg2.angular_velocity.x = gyro.gyro.x; // these might be gg not aa
+      msg2.angular_velocity.y = gyro.gyro.y;
+      msg2.angular_velocity.z = gyro.gyro.z;
+      msg2.linear_acceleration.x = accel.acceleration.x; // these might be aa not gg
+      msg2.linear_acceleration.y = accel.acceleration.y;
+      msg2.linear_acceleration.z = accel.acceleration.z;
+
+      RCSOFTCHECK(rcl_publish(&publisher2, &msg2, NULL));
 
       //    msg2.data = (float)gx;  // Assign IMU data to message
       ///     RCSOFTCHECK(rcl_publish(&publisher2, &msg2, NULL));
@@ -136,7 +136,7 @@ bool create_entities()
   RCCHECK(rclc_publisher_init_default(
       &publisher2,
       &node,
-      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+      ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
       "micro_ros_arduino_imu_publisher2"));
 
   const unsigned int timer_timeout = 1000;
@@ -167,38 +167,13 @@ void destroy_entities()
 void setup()
 {
   state = WAITING_AGENT;
-  // join I2C bus (I2Cdev library doesn't do this automatically)
-#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
   Wire.begin();
-#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
-  Fastwire::setup(400, true);
-#endif
-  mpu.initialize();
 
-  devStatus = mpu.dmpInitialize();
+  tcaselect(0);
+  mpu.begin();
 
-  // supply your own gyro offsets here, scaled for min sensitivity
-  mpu.setXGyroOffset(-156);
-  mpu.setYGyroOffset(-11);
-  mpu.setZGyroOffset(-14);
-  mpu.setXAccelOffset(-3699);
-  mpu.setYAccelOffset(-2519);
-  mpu.setZAccelOffset(1391); // 1688 factory default for my test chip
-
-  // make sure it worked (returns 0 if so)
-  if (devStatus == 0)
-  {
-
-    mpu.CalibrateAccel(6);
-    mpu.CalibrateGyro(6);
-    mpu.PrintActiveOffsets();
-    mpu.setDMPEnabled(true);
-
-    mpuIntStatus = mpu.getIntStatus();
-
-    dmpReady = true;
-    packetSize = mpu.dmpGetFIFOPacketSize();
-  }
+  tcaselect(1);
+  mpu2.begin();
 
   set_microros_transports();
 
@@ -207,17 +182,13 @@ void setup()
 
   delay(2000);
 
-  msg2.data = 0;
-
   msg.header.frame_id.data = "imu_link";
+  msg2.header.frame_id.data = "imu2_link";
 }
 
 void loop()
 {
   delay(100);
-  if (!dmpReady)
-    return;
-
   switch (state)
   {
   case WAITING_AGENT:
