@@ -127,19 +127,19 @@ bool create_entities()
 
   RCCHECK(rclc_node_init_default(&node, "micro_ros_arduino_imu_node", "", &support));
 
-  RCCHECK(rclc_publisher_init_default(
+  RCCHECK(rclc_publisher_init_best_effort(
       &publisher,
       &node,
       ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
       "micro_ros_arduino_imu_publisher"));
+//
+//  RCCHECK(rclc_publisher_init_default(
+//      &publisher2,
+//      &node,
+//      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+//      "micro_ros_arduino_imu_publisher2"));
 
-  RCCHECK(rclc_publisher_init_default(
-      &publisher2,
-      &node,
-      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
-      "micro_ros_arduino_imu_publisher2"));
-
-  const unsigned int timer_timeout = 1000;
+  const unsigned int timer_timeout = 1;
   RCCHECK(rclc_timer_init_default(
       &timer,
       &support,
@@ -204,8 +204,8 @@ void setup()
 
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);
-
-  delay(2000);
+//
+//  delay(2000);
 
   msg2.data = 0;
 
@@ -214,7 +214,7 @@ void setup()
 
 void loop()
 {
-  delay(100);
+//  delay(100);
   if (!dmpReady)
     return;
 
@@ -250,6 +250,6 @@ void loop()
 
   if (state == AGENT_CONNECTED)
   {
-    RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
+    RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(1)));
   }
 }
