@@ -94,7 +94,6 @@ void error_loop()
 
 void publishIMUData(Adafruit_MPU6050 &mpu, sensor_msgs__msg__Imu &msg, rcl_publisher_t &publisher)
 {
-  sensors_event_t accel, gyro, temp;
   mpu.getEvent(&accel, &gyro, &temp);
   msg.angular_velocity.x = gyro.gyro.x;
   msg.angular_velocity.y = gyro.gyro.y;
@@ -114,7 +113,7 @@ void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
     {
       sensors_event_t event;
 
-      tcaselect(0);
+      // tcaselect(0);
       publishIMUData(mpu, msg, publisher);
       // tcaselect(1);
       // publishIMUData(mpu2, msg2, publisher2);
@@ -202,7 +201,7 @@ void setup()
   Wire.begin();
 //select mux addr
 //set up the IMU
-  tcaselect(0);
+  // tcaselect(0);
   mpu.begin();
   // tcaselect(1);
   // mpu2.begin();
