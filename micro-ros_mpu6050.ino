@@ -13,8 +13,15 @@
 #include <sensor_msgs/msg/imu.h>
 rcl_publisher_t publisher;
 rcl_publisher_t publisher2;
+rcl_publisher_t publisher3;
+rcl_publisher_t publisher4;
+rcl_publisher_t publisher5;
+
 sensor_msgs__msg__Imu msg;
 sensor_msgs__msg__Imu msg2;
+sensor_msgs__msg__Imu msg3;
+sensor_msgs__msg__Imu msg4;
+sensor_msgs__msg__Imu msg5;
 
 rclc_executor_t executor;
 rclc_support_t support;
@@ -61,6 +68,9 @@ enum states
 /* Assign a unique ID to this sensor at the same time */
 Adafruit_MPU6050 mpu;
 Adafruit_MPU6050 mpu2;
+Adafruit_MPU6050 mpu3;
+Adafruit_MPU6050 mpu4;
+Adafruit_MPU6050 mpu5;
 sensors_event_t accel, gyro, temp; // Declares an object "event"
 
 void tcaselect(uint8_t i)
@@ -82,6 +92,19 @@ void error_loop()
   }
 }
 
+void publishIMUData(Adafruit_MPU6050 &mpu, sensor_msgs__msg__Imu &msg, rcl_publisher_t &publisher)
+{
+  sensors_event_t accel, gyro, temp;
+  mpu.getEvent(&accel, &gyro, &temp);
+  msg.angular_velocity.x = gyro.gyro.x;
+  msg.angular_velocity.y = gyro.gyro.y;
+  msg.angular_velocity.z = gyro.gyro.z;
+  msg.linear_acceleration.x = accel.acceleration.x;
+  msg.linear_acceleration.y = accel.acceleration.y;
+  msg.linear_acceleration.z = accel.acceleration.z;
+  RCSOFTCHECK(rcl_publish(&publisher, &msg, NULL));
+}
+
 void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
 {
   if (state == AGENT_CONNECTED)
@@ -92,28 +115,15 @@ void timer_callback(rcl_timer_t *timer, int64_t last_call_time)
       sensors_event_t event;
 
       tcaselect(0);
-      mpu.getEvent(&accel, &gyro, &temp);
-      msg.angular_velocity.x = gyro.gyro.x; // these might be gg not aa
-      msg.angular_velocity.y = gyro.gyro.y;
-      msg.angular_velocity.z = gyro.gyro.z;
-      msg.linear_acceleration.x = accel.acceleration.x; // these might be aa not gg
-      msg.linear_acceleration.y = accel.acceleration.y;
-      msg.linear_acceleration.z = accel.acceleration.z;
-      RCSOFTCHECK(rcl_publish(&publisher, &msg, NULL));
-      delay(1000);
-      tcaselect(1);
-      mpu2.getEvent(&accel, &gyro, &temp);
-      msg2.angular_velocity.x = gyro.gyro.x; // these might be gg not aa
-      msg2.angular_velocity.y = gyro.gyro.y;
-      msg2.angular_velocity.z = gyro.gyro.z;
-      msg2.linear_acceleration.x = accel.acceleration.x; // these might be aa not gg
-      msg2.linear_acceleration.y = accel.acceleration.y;
-      msg2.linear_acceleration.z = accel.acceleration.z;
-
-      RCSOFTCHECK(rcl_publish(&publisher2, &msg2, NULL));
-
-      //    msg2.data = (float)gx;  // Assign IMU data to message
-      ///     RCSOFTCHECK(rcl_publish(&publisher2, &msg2, NULL));
+      publishIMUData(mpu, msg, publisher);
+      // tcaselect(1);
+      // publishIMUData(mpu2, msg2, publisher2);
+      // tcaselect(2);
+      // publishIMUData(mpu3, msg3, publisher3);
+      // tcaselect(3);
+      // publishIMUData(mpu4, msg4, publisher4);
+      // tcaselect(4);
+      // publishIMUData(mpu5, msg5, publisher5);
     }
   }
 }
@@ -133,20 +143,39 @@ bool create_entities()
       ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
       "micro_ros_arduino_imu_publisher"));
 
-  RCCHECK(rclc_publisher_init_default(
-      &publisher2,
-      &node,
-      ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
-      "micro_ros_arduino_imu_publisher2"));
+  // RCCHECK(rclc_publisher_init_default(
+  //     &publisher2,
+  //     &node,
+  //     ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
+  //     "micro_ros_arduino_imu_publisher2"));
 
-  const unsigned int timer_timeout = 1000;
+  // RCCHECK(rclc_publisher_init_default(
+  //     &publisher3,
+  //     &node,
+  //     ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
+  //     "micro_ros_arduino_imu_publisher3"));
+
+  // RCCHECK(rclc_publisher_init_default(
+  //     &publisher4,
+  //     &node,
+  //     ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
+  //     "micro_ros_arduino_imu_publisher4"));
+
+  // RCCHECK(rclc_publisher_init_default(
+  //     &publisher5,
+  //     &node,
+  //     ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
+  //     "micro_ros_arduino_imu_publisher5"));
+
+
+  const unsigned int timer_timeout = 1;
   RCCHECK(rclc_timer_init_default(
       &timer,
       &support,
       RCL_MS_TO_NS(timer_timeout),
       timer_callback));
 
-  RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
+  RCCHECK(rclc_executor_init(&executor, &support.context, 6, &allocator));
   RCCHECK(rclc_executor_add_timer(&executor, &timer));
   return true;
 }
@@ -158,6 +187,9 @@ void destroy_entities()
 
   rcl_publisher_fini(&publisher, &node);
   rcl_publisher_fini(&publisher2, &node);
+  rcl_publisher_fini(&publisher3, &node);
+  rcl_publisher_fini(&publisher4, &node);
+  rcl_publisher_fini(&publisher5, &node);
   rcl_timer_fini(&timer);
   rclc_executor_fini(&executor);
   rcl_node_fini(&node);
@@ -168,27 +200,38 @@ void setup()
 {
   state = WAITING_AGENT;
   Wire.begin();
-
+//select mux addr
+//set up the IMU
   tcaselect(0);
   mpu.begin();
+  // tcaselect(1);
+  // mpu2.begin();
+  // tcaselect(2);
+  // mpu3.begin();
+  // tcaselect(3);
+  // mpu4.begin();
+  // tcaselect(4);
+  // mpu5.begin();
 
-  tcaselect(1);
-  mpu2.begin();
 
   set_microros_transports();
 
+//teensy led
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);
 
-  delay(2000);
+ 
 
   msg.header.frame_id.data = "imu_link";
   msg2.header.frame_id.data = "imu2_link";
+  msg3.header.frame_id.data = "imu3_link";
+  msg4.header.frame_id.data = "imu4_link";
+  msg5.header.frame_id.data = "imu5_link";
 }
 
 void loop()
 {
-  delay(100);
+  
   switch (state)
   {
   case WAITING_AGENT:
@@ -221,6 +264,6 @@ void loop()
 
   if (state == AGENT_CONNECTED)
   {
-    RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
+    RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(1000000)));
   }
 }
