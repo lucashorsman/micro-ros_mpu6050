@@ -298,9 +298,16 @@ void setup()
   Wire.begin();
 
   mpu0.initialize();
+  mpu1.initialize();
+  mpu2.initialize();
+  mpu3.initialize();
+  mpu4.initialize();
 
-  devStatus = mpu0.dmpInitialize();
-
+   mpu0.dmpInitialize();
+  mpu1.dmpInitialize();
+  mpu2.dmpInitialize();
+  mpu3.dmpInitialize();
+  devStatus = mpu4.dmpInitialize();
   // supply your own gyro offsets here, scaled for min sensitivity
   mpu0.setXGyroOffset(-156);
   mpu0.setYGyroOffset(-11);
@@ -308,6 +315,37 @@ void setup()
   mpu0.setXAccelOffset(-3699);
   mpu0.setYAccelOffset(-2519);
   mpu0.setZAccelOffset(1391); // 1688 factory default for my test chip
+
+  mpu1.setXGyroOffset(-156);
+  mpu1.setYGyroOffset(-11);
+  mpu1.setZGyroOffset(-14);
+  mpu1.setXAccelOffset(-3699);
+  mpu1.setYAccelOffset(-2519);
+  mpu1.setZAccelOffset(1391); // 1688 factory default for my test chip
+
+  mpu2.setXGyroOffset(-156);
+  mpu2.setYGyroOffset(-11);
+  mpu2.setZGyroOffset(-14);
+  mpu2.setXAccelOffset(-3699);
+  mpu2.setYAccelOffset(-2519);
+
+  mpu2.setZAccelOffset(1391); // 1688 factory default for my test chip
+
+  mpu3.setXGyroOffset(-156);
+  mpu3.setYGyroOffset(-11);
+  mpu3.setZGyroOffset(-14);
+  mpu3.setXAccelOffset(-3699);
+  mpu3.setYAccelOffset(-2519);
+  mpu3.setZAccelOffset(1391); // 1688 factory default for my test chip
+
+  mpu4.setXGyroOffset(-156);
+  mpu4.setYGyroOffset(-11);
+  mpu4.setZGyroOffset(-14);
+  mpu4.setXAccelOffset(-3699);
+  mpu4.setYAccelOffset(-2519);
+  mpu4.setZAccelOffset(1391); // 1688 factory default for my test chip
+
+
 
   // make sure it worked (returns 0 if so)
   if (devStatus == 0)
@@ -317,6 +355,28 @@ void setup()
     mpu0.CalibrateGyro(6);
     mpu0.PrintActiveOffsets();
     mpu0.setDMPEnabled(true);
+
+    mpu1.CalibrateAccel(6);
+    mpu1.CalibrateGyro(6);
+    mpu1.PrintActiveOffsets();
+    mpu1.setDMPEnabled(true);
+
+    mpu2.CalibrateAccel(6);
+    mpu2.CalibrateGyro(6);
+    mpu2.PrintActiveOffsets();
+    mpu2.setDMPEnabled(true);
+
+    mpu3.CalibrateAccel(6);
+    mpu3.CalibrateGyro(6);
+    mpu3.PrintActiveOffsets();
+    mpu3.setDMPEnabled(true);
+
+    mpu4.CalibrateAccel(6);
+    mpu4.CalibrateGyro(6);
+    mpu4.PrintActiveOffsets();
+    mpu4.setDMPEnabled(true);
+    
+    
 
     mpuIntStatus = mpu0.getIntStatus();
 
