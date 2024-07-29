@@ -270,7 +270,7 @@ bool create_entities()
             RCL_MS_TO_NS(timer_timeout),
             timer_callback));
 
-  RCCHECK(rclc_executor_init(&executor, &support.context, 5, &allocator));
+  RCCHECK(rclc_executor_init(&executor, &support.context, 6, &allocator));
   RCCHECK(rclc_executor_add_timer(&executor, &timer));
   return true;
 }
@@ -308,6 +308,7 @@ void setup()
   mpu2.dmpInitialize();
   mpu3.dmpInitialize();
   devStatus = mpu4.dmpInitialize();
+  
   // supply your own gyro offsets here, scaled for min sensitivity
   mpu0.setXGyroOffset(-156);
   mpu0.setYGyroOffset(-11);
@@ -347,9 +348,7 @@ void setup()
 
 
 
-  // make sure it worked (returns 0 if so)
-  if (devStatus == 0)
-  {
+
 
     mpu0.CalibrateAccel(6);
     mpu0.CalibrateGyro(6);
@@ -382,7 +381,7 @@ void setup()
 
     dmpReady = true;
     packetSize = mpu0.dmpGetFIFOPacketSize();
-  }
+  
 
   set_microros_transports();
 
@@ -391,15 +390,12 @@ void setup()
   //
   //  delay(2000);
 
-
 }
+
 
 void loop()
 {
-  //  delay(100);
-  if (!dmpReady)
-    return;
-
+if (!dmpReady) return;
   switch (state)
   {
     case WAITING_AGENT:
